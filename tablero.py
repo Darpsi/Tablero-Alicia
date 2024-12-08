@@ -65,6 +65,3 @@ def main():
         draw_pieces(screen, images)
         pygame.display.flip()
         clock.tick(60)
-
-if __name__ == "__main__":
-    main()
