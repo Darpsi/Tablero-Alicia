@@ -2,14 +2,12 @@ import pygame
 import sys
 
 # Import the display and piece-drawing logic from the existing file
-from tablero import draw_board, draw_pieces, load_images
+from tablero import draw_board, load_images
 
 # Constants
 WIDTH, HEIGHT = 400, 400
 ROWS, COLS = 8, 8
 SQUARE_SIZE = WIDTH // COLS
-WHITE = (240, 217, 181)
-BROWN = (181, 136, 99)
 
 # Initial board setup
 board = [
@@ -32,8 +30,6 @@ def get_square_under_mouse():
 
 def is_valid_move(piece, start, end, board):
     """Validate moves based on piece type (basic rules)."""
-    # Add specific rules for each piece here.
-    # For now, we allow any move within bounds for simplicity.
     sr, sc = start
     er, ec = end
 
@@ -55,6 +51,14 @@ def move_piece(start, end, board):
         board[sr][sc] = None
         return True
     return False
+
+# Draw pieces using the current board state
+def draw_pieces(screen, images, board):
+    for row in range(ROWS):
+        for col in range(COLS):
+            piece = board[row][col]
+            if piece:
+                screen.blit(images[piece], (col * SQUARE_SIZE, row * SQUARE_SIZE))
 
 # Main game loop
 def main():
@@ -86,7 +90,7 @@ def main():
 
         # Drawing
         draw_board(screen)
-        draw_pieces(screen, images)
+        draw_pieces(screen, images, board)
 
         # Highlight selected square
         if selected_square:
