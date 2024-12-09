@@ -55,7 +55,6 @@ def path_clear(start, end, board):
 def is_valid_move(piece, start, end, board):
     """Validate moves based on piece type."""
     if not piece:  # No piece at the start square
-        print("No piece at start square.")
         return False
 
     sr, sc = start
@@ -64,12 +63,10 @@ def is_valid_move(piece, start, end, board):
     delta_col = ec - sc
 
     if not (0 <= er < ROWS and 0 <= ec < COLS):
-        print(f"Move out of bounds: start={start}, end={end}")
         return False  # Out of bounds
 
     target_piece = board[er][ec]
     if target_piece and target_piece[0] == piece[0]:
-        print("Cannot capture a piece of the same color.")
         return False  # Can't capture a piece of the same color
 
     piece_type = piece[1]
@@ -77,32 +74,22 @@ def is_valid_move(piece, start, end, board):
     if piece_type == 'k':  # King
         if max(abs(delta_row), abs(delta_col)) == 1:
             return True
-        print("Invalid King move.")
-        return False
 
     elif piece_type == 'q':  # Queen
         if abs(delta_row) == abs(delta_col) or delta_row == 0 or delta_col == 0:
             return path_clear(start, end, board)
-        print("Invalid Queen move.")
-        return False
 
     elif piece_type == 'r':  # Rook
         if delta_row == 0 or delta_col == 0:
             return path_clear(start, end, board)
-        print("Invalid Rook move.")
-        return False
 
     elif piece_type == 'b':  # Bishop
         if abs(delta_row) == abs(delta_col):
             return path_clear(start, end, board)
-        print("Invalid Bishop move.")
-        return False
 
     elif piece_type == 'n':  # Knight
         if (abs(delta_row), abs(delta_col)) in [(2, 1), (1, 2)]:
             return True
-        print("Invalid Knight move.")
-        return False
 
     elif piece_type == 'p':  # Pawn
         direction = -1 if piece[0] == 'w' else 1  # White moves up, Black moves down
@@ -121,19 +108,87 @@ def is_valid_move(piece, start, end, board):
             if target_piece:  # Capturing an opponent's piece
                 return True
 
-        print("Invalid Pawn move.")
-        return False
-
-    print(f"Invalid move for piece type: {piece_type}")
     return False  # Invalid move for this piece type
 
+
+def find_king(board, color):
+    """Find the position of the king for the given color."""
+    for row in range(ROWS):
+        for col in range(COLS):
+            piece = board[row][col]
+            if piece == f"{color}k":
+                return row, col
+    return None  # El rey no se encuentra (esto no debería suceder en un juego válido)
+
+def is_under_attack(board, position, attacker_color):
+    """Check if the given position is under attack by any piece of the attacker color."""
+    for row in range(ROWS):
+        for col in range(COLS):
+            piece = board[row][col]
+            if piece and piece[0] == attacker_color:
+                if is_valid_move(piece, (row, col), position, board):
+                    return True
+    return False
+
+def is_in_check(board, color):
+    """Check if the king of the given color is in check."""
+    king_pos = find_king(board, color)
+    if not king_pos:
+        return False  # Esto solo ocurre si no hay rey en el tablero, lo cual no es normal
+    opponent_color = 'b' if color == 'w' else 'w'
+    return is_under_attack(board, king_pos, opponent_color)
+
+def is_checkmate(board, color):
+    """Check if the current player's king is in checkmate."""
+    king_pos = find_king(board, color)
+    if not king_pos:
+        return False  # El rey no se encuentra en el tablero (lo cual no debería ocurrir)
+    
+    # Si el rey está en jaque, verificar si tiene alguna salida
+    if is_in_check(board, color):
+        kr, kc = king_pos
+        opponent_color = 'b' if color == 'w' else 'w'
+        
+        # Verificar si alguna casilla alrededor del rey puede ser movida sin poner al rey en jaque
+        for dr in range(-1, 2):
+            for dc in range(-1, 2):
+                nr, nc = kr + dr, kc + dc
+                if 0 <= nr < ROWS and 0 <= nc < COLS:
+                    # Verificar si la casilla está vacía o si contiene una pieza del color enemigo
+                    target_piece = board[nr][nc]
+                    if target_piece is None or target_piece[0] == opponent_color:
+                        # Probar mover el rey a esa casilla
+                        temp_board = [row[:] for row in board]
+                        temp_board[kr][kc] = None
+                        temp_board[nr][nc] = f"{color}k"
+                        
+                        if not is_in_check(temp_board, color):
+                            return False  # El rey puede moverse y salir del jaque
+
+        # Si no puede moverse, verificar si alguna pieza puede bloquear el jaque o capturar la pieza atacante
+        for row in range(ROWS):
+            for col in range(COLS):
+                piece = board[row][col]
+                if piece and piece[0] == color:  # Si es una pieza del color del rey
+                    if is_valid_move(piece, (row, col), king_pos, board):  # Si puede mover y bloquear
+                        temp_board = [row[:] for row in board]
+                        temp_board[kr][kc] = None
+                        temp_board[row][col] = None  # Remover pieza bloqueadora
+                        temp_board[kr][kc] = f"{color}k"  # Colocar el rey de nuevo
+
+                        if not is_in_check(temp_board, color):
+                            return False  # Si se puede bloquear el jaque, no es jaque mate
+
+        # Si no puede escapar ni bloquear el jaque, es jaque mate
+        return True
+    return False
 
 
 # Add a variable to track the current turn
 current_turn = 'w'  # White starts the game
 
 def move_piece(start, end, board):
-    """Move the piece on the board if the move is valid."""
+    """Move the piece on the board if the move is valid and doesn't leave the king in check."""
     global current_turn
     sr, sc = start
     er, ec = end
@@ -148,19 +203,32 @@ def move_piece(start, end, board):
         print(f"It's not {piece[0]}'s turn!")
         return False
 
-    print(f"Attempting to move {piece} from {start} to {end}")
     if is_valid_move(piece, start, end, board):
+        # Simulate the move
+        temp_board = [row[:] for row in board]  # Create a copy of the board
+        temp_board[er][ec] = piece
+        temp_board[sr][sc] = None
+
+        # Check if the move leaves the king in check
+        if is_in_check(temp_board, current_turn):
+            print("Move leaves the king in check!")
+            return False
+
+        # Apply the move
         board[er][ec] = piece
         board[sr][sc] = None
-        print(f"Moved {piece} to {end}")
 
         # Switch the turn
         current_turn = 'b' if current_turn == 'w' else 'w'
+        print(f"Moved {piece} to {end}")
         print(f"Turn switched to: {current_turn}")
         return True
     else:
-        print("Move invalid.")
+        print(f"Invalid move for {piece} from {start} to {end}.")
     return False
+
+
+
 
 def display_turn(screen, font, current_turn):
     """Display the current turn on the screen."""
@@ -218,6 +286,17 @@ def main():
         # Drawing
         draw_board(screen)
         draw_pieces(screen, images, board)
+
+        # Highlight the king if it's in check
+        king_pos = find_king(board, current_turn)
+        if king_pos and is_in_check(board, current_turn):
+            kr, kc = king_pos
+            pygame.draw.rect(screen, (255, 0, 0), (kc * SQUARE_SIZE, kr * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE), 3)
+
+        # Check for checkmate
+        if king_pos and is_checkmate(board, current_turn):
+            print(f"Checkmate! {current_turn.upper()} loses.")
+            running = False  # End the game
 
         # Highlight selected square
         if selected_square:
