@@ -4,6 +4,9 @@ import sys
 # Import the display and piece-drawing logic from the existing file
 from tablero import draw_board, load_images
 
+# Add a variable to track the current turn
+current_turn = 'w'  # White starts the game
+
 # Constants
 WIDTH, HEIGHT = 400, 400
 ROWS, COLS = 8, 8
@@ -126,8 +129,12 @@ def is_valid_move(piece, start, end, board):
 
 
 
+# Add a variable to track the current turn
+current_turn = 'w'  # White starts the game
+
 def move_piece(start, end, board):
     """Move the piece on the board if the move is valid."""
+    global current_turn
     sr, sc = start
     er, ec = end
     piece = board[sr][sc]
@@ -136,15 +143,30 @@ def move_piece(start, end, board):
         print("No piece to move.")
         return False
 
+    # Check if it's the correct turn
+    if piece[0] != current_turn:
+        print(f"It's not {piece[0]}'s turn!")
+        return False
+
     print(f"Attempting to move {piece} from {start} to {end}")
     if is_valid_move(piece, start, end, board):
         board[er][ec] = piece
         board[sr][sc] = None
         print(f"Moved {piece} to {end}")
+
+        # Switch the turn
+        current_turn = 'b' if current_turn == 'w' else 'w'
+        print(f"Turn switched to: {current_turn}")
         return True
     else:
         print("Move invalid.")
     return False
+
+def display_turn(screen, font, current_turn):
+    """Display the current turn on the screen."""
+    turn_text = f"Turno de {'Blancas' if current_turn == 'w' else 'Negras'}"
+    text_surface = font.render(turn_text, True, (0, 0, 0))
+    screen.blit(text_surface, (10, HEIGHT + 10))  # Posición del mensaje debajo del tablero
 
 
 # Draw pieces using the current board state
@@ -158,13 +180,16 @@ def draw_pieces(screen, images, board):
 # Main game loop
 def main():
     pygame.init()
-    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    screen = pygame.display.set_mode((WIDTH, HEIGHT + 50))  # Añadir espacio para el mensaje
     pygame.display.set_caption("Chess Game")
     clock = pygame.time.Clock()
+    font = pygame.font.Font(None, 36)  # Fuente para el texto del turno
 
     images = load_images()
     selected_square = None
     running = True
+
+    global current_turn
 
     while running:
         for event in pygame.event.get():
@@ -173,15 +198,22 @@ def main():
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 row, col = get_square_under_mouse()
 
-                if selected_square:
-                    # Attempt to move the piece
-                    if move_piece(selected_square, (row, col), board):
-                        print(f"Moved {board[row][col]} to {row, col}")
-                    selected_square = None  # Deselect after move
-                elif board[row][col]:
-                    # Select the piece
-                    selected_square = (row, col)
-                    print(f"Selected {board[row][col]} at {row, col}")
+                # Validar que el clic esté dentro de los límites del tablero
+                if 0 <= row < ROWS and 0 <= col < COLS:
+                    if selected_square:
+                        # Attempt to move the piece
+                        if move_piece(selected_square, (row, col), board):
+                            print(f"Moved {board[row][col]} to {row, col}")
+                        selected_square = None  # Deselect after move
+                    elif board[row][col]:
+                        # Check if the piece matches the current turn
+                        if board[row][col][0] == current_turn:
+                            selected_square = (row, col)
+                            print(f"Selected {board[row][col]} at {row, col}")
+                        else:
+                            print(f"Es el turno de {'Blancas' if current_turn == 'w' else 'Negras'}")
+                else:
+                    print("Clic fuera del tablero.")  # Mensaje para depuración
 
         # Drawing
         draw_board(screen)
@@ -192,11 +224,24 @@ def main():
             sr, sc = selected_square
             pygame.draw.rect(screen, (0, 255, 0), (sc * SQUARE_SIZE, sr * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE), 3)
 
+        # Highlight pieces that can move
+        for row in range(ROWS):
+            for col in range(COLS):
+                piece = board[row][col]
+                if piece and piece[0] == current_turn:
+                    pygame.draw.rect(screen, (0, 255, 255), 
+                                     (col * SQUARE_SIZE, row * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE), 2)
+
+        # Display the turn
+        display_turn(screen, font, current_turn)
+
         pygame.display.flip()
         clock.tick(60)
 
     pygame.quit()
     sys.exit()
+
+
 
 if __name__ == "__main__":
     main()
