@@ -22,31 +22,19 @@ def load_images():
     return images
 
 # Draw the chessboard
-def draw_board(screen):
+def draw_boards(screen, offset=0):
     colors = [WHITE, BROWN]
     for row in range(ROWS):
         for col in range(COLS):
             color = colors[(row + col) % 2]
-            pygame.draw.rect(screen, color, (col * SQUARE_SIZE, row * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE))
+            pygame.draw.rect(
+                screen,
+                color,
+                (col * SQUARE_SIZE + offset, row * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE)
+            )
 
-# Place the pieces on the board
-def draw_pieces(screen, images):
-    initial_positions = [
-        ['br', 'bn', 'bb', 'bq', 'bk', 'bb', 'bn', 'br'],
-        ['bp', 'bp', 'bp', 'bp', 'bp', 'bp', 'bp', 'bp'],
-        [None, None, None, None, None, None, None, None],
-        [None, None, None, None, None, None, None, None],
-        [None, None, None, None, None, None, None, None],
-        [None, None, None, None, None, None, None, None],
-        ['wp', 'wp', 'wp', 'wp', 'wp', 'wp', 'wp', 'wp'],
-        ['wr', 'wn', 'wb', 'wq', 'wk', 'wb', 'wn', 'wr']
-    ]
 
-    for row in range(ROWS):
-        for col in range(COLS):
-            piece = initial_positions[row][col]
-            if piece:
-                screen.blit(images[piece], (col * SQUARE_SIZE, row * SQUARE_SIZE))
+
 
 def main():
     screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -61,7 +49,6 @@ def main():
                 pygame.quit()
                 sys.exit()
 
-        draw_board(screen)
-        draw_pieces(screen, images)
+        draw_boards(screen)
         pygame.display.flip()
         clock.tick(60)
