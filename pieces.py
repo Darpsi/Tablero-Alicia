@@ -1,16 +1,21 @@
 # pieces.py
+import os
 import pygame
 from settings import ROWS, COLS, SQUARE_SIZE, WIDTH
 
 def load_images():
-    pieces = ['bp', 'br', 'bn', 'bb', 'bq', 'bk', 
-              'wp', 'wr', 'wn', 'wb', 'wq', 'wk']
+    pieces = ['wp', 'wr', 'wn', 'wb', 'wq', 'wk', 
+              'bp', 'br', 'bn', 'bb', 'bq', 'bk']
     images = {}
     for piece in pieces:
-        images[piece] = pygame.transform.scale(
-            pygame.image.load(f"{piece}.png"), 
-            (SQUARE_SIZE, SQUARE_SIZE)
-        )
+        # Construct the correct path to each image
+        image_path = os.path.join("png", f"{piece}.png")  
+        
+        if not os.path.exists(image_path):  # Check if the file exists
+            raise FileNotFoundError(f"Image file not found: {image_path}")
+        
+        images[piece] = pygame.image.load(image_path)
+        images[piece] = pygame.transform.scale(images[piece], (SQUARE_SIZE, SQUARE_SIZE))
     return images
 
 def draw_pieces_on_boards(screen, images, board1, board2):

@@ -17,7 +17,7 @@ def load_images():
               'bp', 'br', 'bn', 'bb', 'bq', 'bk']
     images = {}
     for piece in pieces:
-        images[piece] = pygame.image.load(f"{piece}.png")
+        images[piece] = pygame.image.load("png", f"{piece}.png")
         images[piece] = pygame.transform.scale(images[piece], (SQUARE_SIZE, SQUARE_SIZE))
     return images
 
