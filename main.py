@@ -8,7 +8,7 @@ from game_logic import find_king, is_in_check, is_checkmate, is_valid_move, move
 from utils import get_square_under_mouse
 
 def move_piece(start, end, source_board, target_board):
-    """Move the piece on the board and teleport it to the other board."""
+    """Move the piece on the board, capture enemy pieces, and teleport to the other board."""
     global current_turn
 
     sr, sc = start
@@ -24,24 +24,46 @@ def move_piece(start, end, source_board, target_board):
         print(f"It's not {piece[0]}'s turn!")
         return False
 
+    # Ensure the move is valid on the source board
     if is_valid_move(piece, start, end, source_board):
-        # Simulate the move
+        # Check if the target square on the target board contains a same-color piece
+        if target_board[er][ec] and target_board[er][ec][0] == piece[0]:
+            print(f"Cannot teleport {piece} to {end}: destination occupied by same-color piece.")
+            return False
+
+        # Temporarily capture any piece on the source board
+        captured_piece = source_board[er][ec]
+        source_board[er][ec] = None
+
+        # Simulate the move to check for leaving the king in check
         temp_board = [row[:] for row in source_board]
         temp_board[er][ec] = piece
         temp_board[sr][sc] = None
 
-        # Check if the move leaves the king in check
-        if is_in_check(temp_board, current_turn):
+        # Determine if the move resolves a check on the opposite board
+        king_safe_after_move = not is_in_check(temp_board, target_board, current_turn)
+
+        # Special case: Allow the move if it captures a piece that threatens the king on the opposite board
+        captures_threat = False
+        if captured_piece and captured_piece[1] != 'k':  # Captured piece isn't a king
+            for row in range(ROWS):
+                for col in range(COLS):
+                    if is_valid_move(captured_piece, (er, ec), (row, col), target_board):
+                        captures_threat = True
+                        break
+
+        if not king_safe_after_move and not captures_threat:
             print("Move leaves the king in check!")
+            # Restore the captured piece if the move is invalid
+            source_board[er][ec] = captured_piece
             return False
 
         # Apply the move on the source board
-        source_board[er][ec] = None
         source_board[sr][sc] = None
+        source_board[er][ec] = None
 
         # Teleport the piece to the target board
         target_board[er][ec] = piece
-        target_board[sr][sc] = None
 
         print(f"Moved {piece} to {end} on source board and teleported to the other board.")
 
@@ -130,14 +152,21 @@ def main():
                              (sc * SQUARE_SIZE + WIDTH + 20, sr * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE), 3)
 
         # Display check and checkmate states
-        king_pos = find_king(board_main, current_turn)
-        if king_pos and is_in_check(board_main, current_turn):
+        # Highlight check and checkmate states
+        king_pos = find_king(board_main, current_turn) or find_king(board_teleport, current_turn)
+        if king_pos and is_in_check(board_main, board_teleport, current_turn):
             kr, kc = king_pos
-            pygame.draw.rect(screen, (255, 0, 0), (kc * SQUARE_SIZE, kr * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE), 3)
+            if king_pos in board_main:
+                pygame.draw.rect(screen, (255, 0, 0), (kc * SQUARE_SIZE, kr * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE), 3)
+            else:
+                pygame.draw.rect(screen, (255, 0, 0), 
+                                (kc * SQUARE_SIZE + WIDTH + 20, kr * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE), 3)
 
-        if king_pos and is_checkmate(board_main, current_turn):
+        if king_pos and is_checkmate(board_main, board_teleport, current_turn):
             print(f"Checkmate! {current_turn.upper()} loses.")
             running = False
+
+
 
         pygame.display.flip()
         clock.tick(60)
