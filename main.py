@@ -26,46 +26,31 @@ def move_piece(start, end, source_board, target_board):
 
     # Ensure the move is valid on the source board
     if is_valid_move(piece, start, end, source_board):
-        # Check if the target square on the target board contains a same-color piece
-        if target_board[er][ec] and target_board[er][ec][0] == piece[0]:
-            print(f"Cannot teleport {piece} to {end}: destination occupied by same-color piece.")
+        # Check if the target square on the target board is empty
+        if target_board[er][ec]:
+            print(f"Cannot teleport {piece} to {end}: destination square on the target board is not empty.")
             return False
 
-        # Temporarily capture any piece on the source board
-        captured_piece = source_board[er][ec]
-        source_board[er][ec] = None
-
-        # Simulate the move to check for leaving the king in check
-        temp_board = [row[:] for row in source_board]
-        temp_board[er][ec] = piece
-        temp_board[sr][sc] = None
-
-        # Determine if the move resolves a check on the opposite board
-        king_safe_after_move = not is_in_check(temp_board, target_board, current_turn)
-
-        # Special case: Allow the move if it captures a piece that threatens the king on the opposite board
-        captures_threat = False
-        if captured_piece and captured_piece[1] != 'k':  # Captured piece isn't a king
-            for row in range(ROWS):
-                for col in range(COLS):
-                    if is_valid_move(captured_piece, (er, ec), (row, col), target_board):
-                        captures_threat = True
-                        break
-
-        if not king_safe_after_move and not captures_threat:
-            print("Move leaves the king in check!")
-            # Restore the captured piece if the move is invalid
-            source_board[er][ec] = captured_piece
-            return False
-
-        # Apply the move on the source board
+        # Temporarily remove the piece from the source board
         source_board[sr][sc] = None
-        source_board[er][ec] = None
 
-        # Teleport the piece to the target board
+        # Simulate the move and check both boards for checks
+        temp_source_board = [row[:] for row in source_board]
+        temp_target_board = [row[:] for row in target_board]
+        temp_target_board[er][ec] = piece
+
+        # Ensure the king is not in check on either board
+        if is_in_check(temp_source_board, temp_target_board, current_turn):
+            print("Move leaves the king in check!")
+            # Restore the piece if the move is invalid
+            source_board[sr][sc] = piece
+            return False
+
+        # Perform the move: update source and target boards
+        source_board[sr][sc] = None
         target_board[er][ec] = piece
 
-        print(f"Moved {piece} to {end} on source board and teleported to the other board.")
+        print(f"{piece} teleported to {end} on the target board.")
 
         # Switch the turn
         current_turn = 'b' if current_turn == 'w' else 'w'
@@ -74,6 +59,9 @@ def move_piece(start, end, source_board, target_board):
     else:
         print(f"Invalid move for {piece} from {start} to {end}.")
     return False
+
+
+
 
 
 
