@@ -1,13 +1,15 @@
-# main.py
+import math
 import pygame
 import sys
+from ia import generate_piece_moves, make_move, minimax, undo_move
 from settings import COLS, ROWS, SECOND_BOARD, SQUARE_SIZE, WIDTH, HEIGHT, INITIAL_BOARD
 from tablero import draw_boards, load_images
 from pieces import draw_pieces_on_boards
 from game_logic import find_king, is_in_check, is_checkmate, is_valid_move, move_piece_between_boards
 from utils import get_square_under_mouse
 
-def move_piece(start, end, source_board, target_board):
+
+def move_piece(start, end, source_board, target_board, check_turn=True):
     """Move the piece on the board, capture enemy pieces, and teleport to the other board."""
     global current_turn
 
@@ -19,13 +21,18 @@ def move_piece(start, end, source_board, target_board):
         print("No piece to move.")
         return False
 
-    # Check if it's the correct turn
-    if piece[0] != current_turn:
+    # Check if it's the correct turn (can be bypassed for AI)
+    if check_turn and piece[0] != current_turn:
         print(f"It's not {piece[0]}'s turn!")
         return False
 
     # Ensure the move is valid on the source board
     if is_valid_move(piece, start, end, source_board):
+        # Ensure the move is to the other board
+        if source_board is target_board:
+            print("Pieces must teleport to the other board.")
+            return False
+
         # Check if the target square on the target board is empty
         if target_board[er][ec]:
             print(f"Cannot teleport {piece} to {end}: destination square on the target board is not empty.")
@@ -48,6 +55,7 @@ def move_piece(start, end, source_board, target_board):
 
         # Perform the move: update source and target boards
         source_board[sr][sc] = None
+        source_board[er][ec] = None
         target_board[er][ec] = piece
 
         print(f"{piece} teleported to {end} on the target board.")
@@ -62,7 +70,42 @@ def move_piece(start, end, source_board, target_board):
 
 
 
+def ai_move(board_main, board_teleport):
+    """Calculate and execute the AI's move using the minimax algorithm."""
+    global current_turn
+    print("AI is thinking...")
 
+    depth = 2  # Adjust depth for difficulty level
+    best_move = None
+    best_eval = -math.inf
+
+    # Generate all possible moves for the AI (black)
+    moves = []
+    for r, row in enumerate(board_main):
+        for c, piece in enumerate(row):
+            if piece and piece[0] == 'b':  # AI is playing black
+                moves.extend(
+                    generate_piece_moves((r, c), piece, board_main, board_teleport)
+                )
+
+    for move in moves:
+        source_board, target_board, start, end = move
+
+        # Simulate the move using `move_piece`
+        if move_piece(start, end, source_board, target_board, check_turn=False):
+            # Evaluate the move using minimax
+            eval = minimax(board_main, board_teleport, depth - 1, False, -math.inf, math.inf, 'w')
+            undo_move(board_main, board_teleport, move)  # Undo move for evaluation
+
+            if eval > best_eval:
+                best_eval = eval
+                best_move = move
+
+    # Execute the best move
+    if best_move:
+        source_board, target_board, start, end = best_move
+        if move_piece(start, end, source_board, target_board, check_turn=False):
+            print(f"AI moved: {source_board[start[0]][start[1]]} from {start} to {end}")
 
 
 def main():
@@ -89,35 +132,40 @@ def main():
             if event.type == pygame.QUIT:
                 running = False
             elif event.type == pygame.MOUSEBUTTONDOWN:
-                mouse_x, mouse_y = pygame.mouse.get_pos()
+                if current_turn == 'w':  # Only allow interaction during the player's turn
+                    mouse_x, mouse_y = pygame.mouse.get_pos()
 
-                if mouse_x < WIDTH:  # Main board
-                    row, col = mouse_y // SQUARE_SIZE, mouse_x // SQUARE_SIZE
-                    clicked_board = board_main
-                    board_type = "main"
-                elif mouse_x > WIDTH + 20:  # Teleport board
-                    row, col = mouse_y // SQUARE_SIZE, (mouse_x - WIDTH - 20) // SQUARE_SIZE
-                    clicked_board = board_teleport
-                    board_type = "teleport"
-                else:
-                    continue  # Click was not on a board
-
-                if selected_square and selected_board:
-                    source_board = board_main if selected_board == "main" else board_teleport
-                    target_board = board_teleport if selected_board == "main" else board_main
-
-                    if move_piece(selected_square, (row, col), source_board, target_board):
-                        selected_square, selected_board = None, None
+                    if mouse_x < WIDTH:  # Main board
+                        row, col = mouse_y // SQUARE_SIZE, mouse_x // SQUARE_SIZE
+                        clicked_board = board_main
+                        board_type = "main"
+                    elif mouse_x > WIDTH + 20:  # Teleport board
+                        row, col = mouse_y // SQUARE_SIZE, (mouse_x - WIDTH - 20) // SQUARE_SIZE
+                        clicked_board = board_teleport
+                        board_type = "teleport"
                     else:
-                        selected_square, selected_board = None, None
+                        continue  # Click was not on a board
 
-                elif clicked_board[row][col]:  # Select a piece
-                    if clicked_board[row][col][0] == current_turn:
-                        selected_square = (row, col)
-                        selected_board = board_type
-                        print(f"Selected {clicked_board[row][col]} at {row, col} on {board_type} board")
-                    else:
-                        print(f"Es el turno de {'Blancas' if current_turn == 'w' else 'Negras'}")
+                    if selected_square and selected_board:
+                        source_board = board_main if selected_board == "main" else board_teleport
+                        target_board = board_teleport if selected_board == "main" else board_main
+
+                        if move_piece(selected_square, (row, col), source_board, target_board):
+                            selected_square, selected_board = None, None
+                        else:
+                            selected_square, selected_board = None, None
+
+                    elif clicked_board[row][col]:  # Select a piece
+                        if clicked_board[row][col][0] == current_turn:
+                            selected_square = (row, col)
+                            selected_board = board_type
+                            print(f"Selected {clicked_board[row][col]} at {row, col} on {board_type} board")
+                        else:
+                            print(f"Es el turno de {'Blancas' if current_turn == 'w' else 'Negras'}")
+
+        if current_turn == 'b':  # AI's turn
+            ai_move(board_main, board_teleport)
+            current_turn = 'w'  # Switch turn back to the player
 
         screen.fill((0, 0, 0))  # Clear the screen
 
@@ -129,32 +177,6 @@ def main():
 
         # Draw pieces
         draw_pieces_on_boards(screen, images, board_main, board_teleport)
-
-        # Highlight selected square
-        if selected_square and selected_board == "main":
-            sr, sc = selected_square
-            pygame.draw.rect(screen, (0, 255, 0), (sc * SQUARE_SIZE, sr * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE), 3)
-        elif selected_square and selected_board == "teleport":
-            sr, sc = selected_square
-            pygame.draw.rect(screen, (0, 255, 0), 
-                             (sc * SQUARE_SIZE + WIDTH + 20, sr * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE), 3)
-
-        # Display check and checkmate states
-        # Highlight check and checkmate states
-        king_pos = find_king(board_main, current_turn) or find_king(board_teleport, current_turn)
-        if king_pos and is_in_check(board_main, board_teleport, current_turn):
-            kr, kc = king_pos
-            if king_pos in board_main:
-                pygame.draw.rect(screen, (255, 0, 0), (kc * SQUARE_SIZE, kr * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE), 3)
-            else:
-                pygame.draw.rect(screen, (255, 0, 0), 
-                                (kc * SQUARE_SIZE + WIDTH + 20, kr * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE), 3)
-
-        if king_pos and is_checkmate(board_main, board_teleport, current_turn):
-            print(f"Checkmate! {current_turn.upper()} loses.")
-            running = False
-
-
 
         pygame.display.flip()
         clock.tick(60)
