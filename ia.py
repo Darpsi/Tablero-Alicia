@@ -7,7 +7,6 @@ def minimax(board_main, board_teleport, depth, is_maximizing, alpha, beta, curre
     """
     Perform the Minimax algorithm with Alpha-Beta Pruning and game logic integration.
     """
-    # Base case: checkmate or maximum depth
     if depth == 0 or is_checkmate(board_main, board_teleport, current_turn):
         return evaluate_board(board_main, board_teleport, current_turn)
 
@@ -66,14 +65,15 @@ def generate_piece_moves(position, piece, board_main, board_teleport):
             if not target_piece or target_piece[0] != color:
                 moves.append((board_main, target_board, (sr, sc), (er, ec)))
 
-    
-    # Add teleportation moves for all pieces
+
+
     for er in range(len(board_teleport)):
         for ec in range(len(board_teleport[0])):
-            if board_teleport[er][ec] is None:  # Teleport to empty squares
+            if board_teleport[er][ec] is None:  
                 add_move(board_teleport, r, c, er, ec)
 
     return moves
+
 
 
 def make_move(board_main, board_teleport, move):
@@ -92,7 +92,6 @@ def undo_move(board_main, board_teleport, move):
     sr, sc = start
     er, ec = end
 
-    # Restore the piece on the source board
     piece = target_board[er][ec]
     target_board[er][ec] = None
     source_board[sr][sc] = piece

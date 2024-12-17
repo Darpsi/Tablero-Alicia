@@ -2,7 +2,7 @@ WIDTH, HEIGHT = 400, 400
 ROWS, COLS = 8, 8
 SQUARE_SIZE = WIDTH // COLS
 
-# Define the initial boards
+
 INITIAL_BOARD = [
     ['br', 'bn', 'bb', 'bq', 'bk', 'bb', 'bn', 'br'],
     ['bp', 'bp', 'bp', 'bp', 'bp', 'bp', 'bp', 'bp'],
@@ -15,6 +15,5 @@ INITIAL_BOARD = [
 ]
 
 SECOND_BOARD = [
-    [None] * COLS for _ in range(ROWS)  # Empty second board
+    [None] * COLS for _ in range(ROWS)  
 ]
-

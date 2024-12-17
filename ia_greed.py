@@ -3,6 +3,7 @@ from queue import PriorityQueue
 from game_logic import is_valid_move
 from heuristic import evaluate_board
 
+
 def busqueda_greedy(board_main, board_teleport, max_moves, current_turn):
     """
     Greedy search algorithm for the AI.
@@ -10,9 +11,9 @@ def busqueda_greedy(board_main, board_teleport, max_moves, current_turn):
     """
 
     best_move = None
-    best_score = -math.inf if current_turn == 'b' else math.inf  # Maximize for black, minimize for white
+    best_score = -math.inf if current_turn == 'b' else math.inf  
 
-    # Generate all possible moves
+   
     moves = []
     for r, row in enumerate(board_main):
         for c, piece in enumerate(row):
@@ -20,24 +21,23 @@ def busqueda_greedy(board_main, board_teleport, max_moves, current_turn):
                 possible_moves = generate_piece_moves((r, c), piece, board_main, board_teleport)
                 for move in possible_moves:
                     source_board, target_board, start, end = move
-                    if is_valid_move(piece, start, end, source_board):  # Validate moves
+                    if is_valid_move(piece, start, end, source_board): 
                         moves.append(move)
 
-    # Evaluate each move
+  
     for move in moves:
         source_board, target_board, start, end = move
 
-        # Simulate the move
+       
         piece = source_board[start[0]][start[1]]
         make_move(board_main, board_teleport, move)
 
-        # Evaluate the board state
+        
         score = evaluate_board(board_main, board_teleport, current_turn)
 
-        # Undo the move to restore the original state
+        
         undo_move(board_main, board_teleport, move)
 
-        # Update the best move based on the evaluation
         if (current_turn == 'b' and score > best_score) or (current_turn == 'w' and score < best_score):
             best_score = score
             best_move = move
@@ -74,10 +74,10 @@ def generate_piece_moves(position, piece, board_main, board_teleport):
                 moves.append((board_main, target_board, (sr, sc), (er, ec)))
 
     
-    # Add teleportation moves for all pieces
+    
     for er in range(len(board_teleport)):
         for ec in range(len(board_teleport[0])):
-            if board_teleport[er][ec] is None:  # Teleport to empty squares
+            if board_teleport[er][ec] is None:  
                 add_move(board_teleport, r, c, er, ec)
 
     return moves
@@ -98,7 +98,7 @@ def undo_move(board_main, board_teleport, move):
     sr, sc = start
     er, ec = end
 
-    # Restore the piece on the source board
+   
     piece = target_board[er][ec]
     target_board[er][ec] = None
     source_board[sr][sc] = piece
