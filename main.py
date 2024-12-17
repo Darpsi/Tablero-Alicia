@@ -3,7 +3,7 @@ import pygame
 import sys
 from ia_greed import busqueda_greedy
 from ia import generate_piece_moves, minimax, undo_move
-from settings import COLS, ROWS, SECOND_BOARD, SQUARE_SIZE, WIDTH, HEIGHT, INITIAL_BOARD
+from settings import SECOND_BOARD, SQUARE_SIZE, WIDTH, HEIGHT, INITIAL_BOARD
 from tablero import draw_boards, load_images
 from pieces import draw_pieces_on_boards
 from game_logic import find_king, is_in_check, is_valid_move
@@ -102,7 +102,7 @@ def ai_move(board_main, board_teleport):
         best_move = None
         best_eval = -math.inf
 
-        # Generate all valid moves for black pieces
+        # Generate all valid moves for black pieces on both boards (main and teleport)
         moves = []
         for r, row in enumerate(board_main):
             for c, piece in enumerate(row):
@@ -111,7 +111,21 @@ def ai_move(board_main, board_teleport):
                     for move in possible_moves:
                         source_board, target_board, start, end = move
                         if is_valid_move(piece, start, end, source_board):  # Filter invalid moves
-                            moves.append(move)
+                            # Check if the target board's square is empty
+                            if target_board[end[0]][end[1]] is None:  # Ensure target square is empty
+                                moves.append(move)
+
+        # Add logic for teleport board pieces
+        for r, row in enumerate(board_teleport):
+            for c, piece in enumerate(row):
+                if piece and piece[0] == 'b':  # AI is black
+                    possible_moves = generate_piece_moves((r, c), piece, board_teleport, board_main)
+                    for move in possible_moves:
+                        source_board, target_board, start, end = move
+                        if is_valid_move(piece, start, end, source_board):  # Filter invalid moves
+                            # Check if the target board's square is empty
+                            if target_board[end[0]][end[1]] is None:  # Ensure target square is empty
+                                moves.append(move)
 
         # Evaluate all valid moves
         for move in moves:
@@ -132,6 +146,8 @@ def ai_move(board_main, board_teleport):
     # Alternate to the other algorithm for the next move
     use_greedy_search = not use_greedy_search
     current_turn = 'w'  # Switch turn back to the player
+
+
 
 
 
