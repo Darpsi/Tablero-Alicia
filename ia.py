@@ -66,13 +66,6 @@ def generate_piece_moves(position, piece, board_main, board_teleport):
             if not target_piece or target_piece[0] != color:
                 moves.append((board_main, target_board, (sr, sc), (er, ec)))
 
-    # Generate standard moves based on piece type (Pawn, Knight, etc.)
-    # Pawn logic, for example:
-    if piece_type == 'p':
-        direction = -1 if color == 'w' else 1
-        if 0 <= r + direction < len(board_main):
-            if board_main[r + direction][c] is None:
-                add_move(board_main, r, c, r + direction, c)
     
     # Add teleportation moves for all pieces
     for er in range(len(board_teleport)):

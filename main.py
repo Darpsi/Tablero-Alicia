@@ -1,12 +1,11 @@
 import math
 import pygame
 import sys
-from ia import generate_piece_moves, make_move, minimax, undo_move
+from ia import generate_piece_moves, minimax, undo_move
 from settings import COLS, ROWS, SECOND_BOARD, SQUARE_SIZE, WIDTH, HEIGHT, INITIAL_BOARD
 from tablero import draw_boards, load_images
 from pieces import draw_pieces_on_boards
-from game_logic import find_king, is_in_check, is_checkmate, is_valid_move, move_piece_between_boards
-from utils import get_square_under_mouse
+from game_logic import find_king, is_in_check, is_valid_move
 
 
 def move_piece(start, end, source_board, target_board, check_turn=True):
@@ -71,7 +70,7 @@ def move_piece(start, end, source_board, target_board, check_turn=True):
 
 
 def ai_move(board_main, board_teleport):
-    """Calculate and execute the AI's move using the minimax algorithm."""
+    """Calculate and execute the AI's move using the minimax algorithm with is_valid_move check."""
     global current_turn
     print("AI is thinking...")
 
@@ -79,15 +78,32 @@ def ai_move(board_main, board_teleport):
     best_move = None
     best_eval = -math.inf
 
-    # Generate all possible moves for the AI (black)
+    # Generate all possible moves for both boards
     moves = []
+
+    # Include moves from the main board
     for r, row in enumerate(board_main):
         for c, piece in enumerate(row):
             if piece and piece[0] == 'b':  # AI is playing black
-                moves.extend(
-                    generate_piece_moves((r, c), piece, board_main, board_teleport)
-                )
+                possible_moves = generate_piece_moves((r, c), piece, board_main, board_teleport)
+                for move in possible_moves:
+                    source_board, target_board, start, end = move
+                    # Ensure the move is valid before adding it to the list of moves
+                    if is_valid_move(piece, start, end, source_board):
+                        moves.append(move)
 
+    # Include moves from the teleport board
+    for r, row in enumerate(board_teleport):
+        for c, piece in enumerate(row):
+            if piece and piece[0] == 'b':  # AI is playing black
+                possible_moves = generate_piece_moves((r, c), piece, board_teleport, board_main)
+                for move in possible_moves:
+                    source_board, target_board, start, end = move
+                    # Ensure the move is valid before adding it to the list of moves
+                    if is_valid_move(piece, start, end, source_board):
+                        moves.append(move)
+
+    # Evaluate all valid moves
     for move in moves:
         source_board, target_board, start, end = move
 
@@ -106,6 +122,8 @@ def ai_move(board_main, board_teleport):
         source_board, target_board, start, end = best_move
         if move_piece(start, end, source_board, target_board, check_turn=False):
             print(f"AI moved: {source_board[start[0]][start[1]]} from {start} to {end}")
+
+
 
 
 def main():
