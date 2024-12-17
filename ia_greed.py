@@ -1,41 +1,36 @@
-import math
-from game_logic import is_checkmate
+from queue import PriorityQueue
 from heuristic import evaluate_board
 
+def es_valido(fila, colum, mapa):
+    n, m = len(mapa), len(mapa[0])
+    return 0 <= fila < n and 0 <= colum < m
 
-def minimax(board_main, board_teleport, depth, is_maximizing, alpha, beta, current_turn):
+def busqueda_greedy(board_main, board_teleport, maximo_iteraciones, current_turn):
     """
-    Perform the Minimax algorithm with Alpha-Beta Pruning and game logic integration.
+    Greedy Search to evaluate and determine the best chess move.
     """
-    # Base case: checkmate or maximum depth
-    if depth == 0 or is_checkmate(board_main, board_teleport, current_turn):
-        return evaluate_board(board_main, board_teleport, current_turn)
+    iteraciones = 0
+    best_move = None
+    best_heuristic = float('-inf')
 
-    moves = generate_all_moves(board_main, board_teleport, current_turn)
+    while iteraciones < maximo_iteraciones:
+        moves = generate_all_moves(board_main, board_teleport, current_turn)
+        iteraciones += 1
 
-    if is_maximizing:
-        max_eval = -math.inf
         for move in moves:
             make_move(board_main, board_teleport, move)
-            eval = minimax(board_main, board_teleport, depth - 1, False, alpha, beta, switch_turn(current_turn))
+            heuristic_value = evaluate_board(board_main, board_teleport, current_turn)
             undo_move(board_main, board_teleport, move)
-            max_eval = max(max_eval, eval)
-            alpha = max(alpha, eval)
-            if beta <= alpha:
-                break
-        return max_eval
-    else:
-        min_eval = math.inf
-        for move in moves:
-            make_move(board_main, board_teleport, move)
-            eval = minimax(board_main, board_teleport, depth - 1, True, alpha, beta, switch_turn(current_turn))
-            undo_move(board_main, board_teleport, move)
-            min_eval = min(min_eval, eval)
-            beta = min(beta, eval)
-            if beta <= alpha:
-                break
-        return min_eval
 
+            if heuristic_value > best_heuristic:
+                best_heuristic = heuristic_value
+                best_move = move
+
+        if best_move:
+            make_move(board_main, board_teleport, best_move)
+            return best_move, best_heuristic
+
+    return None
 
 def generate_all_moves(board_main, board_teleport, current_turn):
     """
@@ -49,7 +44,6 @@ def generate_all_moves(board_main, board_teleport, current_turn):
                     moves.extend(generate_piece_moves((r, c), piece, board_main, board_teleport))
     return moves
 
-
 def generate_piece_moves(position, piece, board_main, board_teleport):
     """
     Generate all valid moves for a given piece, including teleportation.
@@ -57,7 +51,6 @@ def generate_piece_moves(position, piece, board_main, board_teleport):
     moves = []
     r, c = position
     color = piece[0]
-    piece_type = piece[1]
 
     def add_move(target_board, sr, sc, er, ec):
         """Add a move if valid."""
@@ -66,15 +59,13 @@ def generate_piece_moves(position, piece, board_main, board_teleport):
             if not target_piece or target_piece[0] != color:
                 moves.append((board_main, target_board, (sr, sc), (er, ec)))
 
-    
-    # Add teleportation moves for all pieces
+    # Add teleportation moves
     for er in range(len(board_teleport)):
         for ec in range(len(board_teleport[0])):
             if board_teleport[er][ec] is None:  # Teleport to empty squares
                 add_move(board_teleport, r, c, er, ec)
 
     return moves
-
 
 def make_move(board_main, board_teleport, move):
     """
@@ -84,7 +75,6 @@ def make_move(board_main, board_teleport, move):
     piece = source_board[start[0]][start[1]]
     source_board[start[0]][start[1]] = None
     target_board[end[0]][end[1]] = piece
-
 
 def undo_move(board_main, board_teleport, move):
     """Undo a move to restore the previous state of the boards."""
@@ -96,12 +86,5 @@ def undo_move(board_main, board_teleport, move):
     piece = target_board[er][ec]
     target_board[er][ec] = None
     source_board[sr][sc] = piece
-
-
-def switch_turn(current_turn):
-    """
-    Switch the current player's turn.
-    """
-    return 'b' if current_turn == 'w' else 'w'
 
 

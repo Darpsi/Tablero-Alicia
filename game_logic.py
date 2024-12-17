@@ -43,21 +43,25 @@ def is_valid_move(piece, start, end, board):
     elif piece_type == 'p':  # Pawn
         direction = -1 if piece[0] == 'w' else 1  # White moves up, Black moves down
 
-        # Forward movement
-        if delta_col == 0:
-            if delta_row == direction and not target_piece:  # Single step
+        # Single forward step
+        if delta_col == 0 and delta_row == direction:
+            if not target_piece:  # Square must be empty
                 return True
-            if delta_row == 2 * direction and sr in (1, 6) and not target_piece:
-                intermediate_row = sr + direction
-                if not board[intermediate_row][sc]:  # Check the intermediate square
-                    return True
 
-        # Capturing diagonally
+        # Double forward step from the starting position
+        if delta_col == 0 and delta_row == 2 * direction and sr in (1, 6):
+            intermediate_row = sr + direction
+            if not board[intermediate_row][sc] and not target_piece:  # Both squares must be empty
+                return True
+
+        # Diagonal capture
         if abs(delta_col) == 1 and delta_row == direction:
-            if target_piece:  # Capturing an opponent's piece
-                return True
+            return True
 
-    return False  # Invalid move for this piece type
+        # En passant capture logic can be added here if needed
+
+    return False  # If none of the conditions match, move is invalid
+
 
 
 def path_clear(start, end, board):
