@@ -65,11 +65,8 @@ def move_piece(start, end, source_board, target_board, check_turn=True):
         # Perform the move: update source and target boards
         target_board[er][ec] = piece  # Place the piece on the target board
 
-        print(f"{piece} teleported to {end} on the target board.")
-
         # Switch the turn
         current_turn = 'b' if current_turn == 'w' else 'w'
-        print(f"Turn switched to: {current_turn}")
         return True
     else:
         print(f"Invalid move for {piece} from {start} to {end}.")
