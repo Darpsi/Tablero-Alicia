@@ -36,6 +36,11 @@ def move_piece(start, end, source_board, target_board, check_turn=True):
             print("Pieces must teleport to the other board.")
             return False
 
+        # Check if the destination square on the target board is empty
+        if target_board[er][ec]:
+            print(f"Destination square {end} on the target board is not empty!")
+            return False
+
         # Handle capturing: Remove enemy piece from the source board if any
         if source_board[er][ec]:  # Capturing an opponent's piece on the source board
             captured_piece = source_board[er][ec]
@@ -71,6 +76,7 @@ def move_piece(start, end, source_board, target_board, check_turn=True):
     return False
 
 
+
 def ai_move(board_main, board_teleport):
     """AI alternates between Greedy Search and Minimax for its move."""
     global current_turn, use_greedy_search
@@ -82,12 +88,12 @@ def ai_move(board_main, board_teleport):
         print("Using Greedy Search...")
         greedy_result = busqueda_greedy(board_main, board_teleport, 50, 'b')
         if greedy_result:
-            path = greedy_result[1]  # Reconstructed path from Greedy Search
-            if path and len(path) >= 2:
-                start = (path[0][0], path[0][1])  # Start position
-                end = (path[1][0], path[1][1])    # End position
-                source_board, target_board = board_main, board_teleport
-                move_piece(start, end, source_board, target_board, check_turn=False)
+            best_move, _ = greedy_result  # Extract the best move and heuristic value
+            if best_move:
+                start, end = best_move[2], best_move[3]  # Start and end positions
+                source_board, target_board = best_move[0], best_move[1]
+                if is_valid_move(source_board[start[0]][start[1]], start, end, source_board):
+                    move_piece(start, end, source_board, target_board, check_turn=False)
         else:
             print("Greedy Search failed to find a move.")
 
@@ -96,14 +102,15 @@ def ai_move(board_main, board_teleport):
         best_move = None
         best_eval = -math.inf
 
-        # Generate all possible moves
+        # Generate all valid moves for black pieces
         moves = []
         for r, row in enumerate(board_main):
             for c, piece in enumerate(row):
                 if piece and piece[0] == 'b':  # AI is black
                     possible_moves = generate_piece_moves((r, c), piece, board_main, board_teleport)
                     for move in possible_moves:
-                        if is_valid_move(piece, move[2], move[3], move[0]):
+                        source_board, target_board, start, end = move
+                        if is_valid_move(piece, start, end, source_board):  # Filter invalid moves
                             moves.append(move)
 
         # Evaluate all valid moves
@@ -125,6 +132,7 @@ def ai_move(board_main, board_teleport):
     # Alternate to the other algorithm for the next move
     use_greedy_search = not use_greedy_search
     current_turn = 'w'  # Switch turn back to the player
+
 
 
 

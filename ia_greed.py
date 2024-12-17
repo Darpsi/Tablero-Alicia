@@ -1,36 +1,49 @@
+import math
 from queue import PriorityQueue
+from game_logic import is_valid_move
 from heuristic import evaluate_board
 
-def es_valido(fila, colum, mapa):
-    n, m = len(mapa), len(mapa[0])
-    return 0 <= fila < n and 0 <= colum < m
+def busqueda_greedy(board_main, board_teleport, max_moves, current_turn):
+    """
+    Greedy search algorithm for the AI.
+    Evaluates all valid moves and selects the one with the highest heuristic value.
+    """
 
-def busqueda_greedy(board_main, board_teleport, maximo_iteraciones, current_turn):
-    """
-    Greedy Search to evaluate and determine the best chess move.
-    """
-    iteraciones = 0
     best_move = None
-    best_heuristic = float('-inf')
+    best_score = -math.inf if current_turn == 'b' else math.inf  # Maximize for black, minimize for white
 
-    while iteraciones < maximo_iteraciones:
-        moves = generate_all_moves(board_main, board_teleport, current_turn)
-        iteraciones += 1
+    # Generate all possible moves
+    moves = []
+    for r, row in enumerate(board_main):
+        for c, piece in enumerate(row):
+            if piece and piece[0] == current_turn:
+                possible_moves = generate_piece_moves((r, c), piece, board_main, board_teleport)
+                for move in possible_moves:
+                    source_board, target_board, start, end = move
+                    if is_valid_move(piece, start, end, source_board):  # Validate moves
+                        moves.append(move)
 
-        for move in moves:
-            make_move(board_main, board_teleport, move)
-            heuristic_value = evaluate_board(board_main, board_teleport, current_turn)
-            undo_move(board_main, board_teleport, move)
+    # Evaluate each move
+    for move in moves:
+        source_board, target_board, start, end = move
 
-            if heuristic_value > best_heuristic:
-                best_heuristic = heuristic_value
-                best_move = move
+        # Simulate the move
+        piece = source_board[start[0]][start[1]]
+        make_move(board_main, board_teleport, move)
 
-        if best_move:
-            make_move(board_main, board_teleport, best_move)
-            return best_move, best_heuristic
+        # Evaluate the board state
+        score = evaluate_board(board_main, board_teleport, current_turn)
 
-    return None
+        # Undo the move to restore the original state
+        undo_move(board_main, board_teleport, move)
+
+        # Update the best move based on the evaluation
+        if (current_turn == 'b' and score > best_score) or (current_turn == 'w' and score < best_score):
+            best_score = score
+            best_move = move
+
+    return (best_move, best_score) if best_move else None
+
 
 def generate_all_moves(board_main, board_teleport, current_turn):
     """
@@ -51,6 +64,7 @@ def generate_piece_moves(position, piece, board_main, board_teleport):
     moves = []
     r, c = position
     color = piece[0]
+    piece_type = piece[1]
 
     def add_move(target_board, sr, sc, er, ec):
         """Add a move if valid."""
@@ -59,13 +73,15 @@ def generate_piece_moves(position, piece, board_main, board_teleport):
             if not target_piece or target_piece[0] != color:
                 moves.append((board_main, target_board, (sr, sc), (er, ec)))
 
-    # Add teleportation moves
+    
+    # Add teleportation moves for all pieces
     for er in range(len(board_teleport)):
         for ec in range(len(board_teleport[0])):
             if board_teleport[er][ec] is None:  # Teleport to empty squares
                 add_move(board_teleport, r, c, er, ec)
 
     return moves
+
 
 def make_move(board_main, board_teleport, move):
     """
