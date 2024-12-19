@@ -1,4 +1,3 @@
-# utils.py
 import pygame
 from settings import SQUARE_SIZE
 

@@ -9,7 +9,6 @@ from pieces import draw_pieces_on_boards
 from game_logic import find_king, is_in_check, is_valid_move
 
 
-# Global flag to alternate between Greedy Search and Minimax
 use_greedy_search = True
 
 def move_piece(start, end, source_board, target_board, check_turn=True):
@@ -21,110 +20,89 @@ def move_piece(start, end, source_board, target_board, check_turn=True):
     piece = source_board[sr][sc]
 
     if not piece:
-        print("No piece to move.")
+        print("No hay pieza para mover.")
         return False
 
-    # Check if it's the correct turn (can be bypassed for AI)
     if check_turn and piece[0] != current_turn:
-        print(f"It's not {piece[0]}'s turn!")
+        print(f"No es el turno de {piece[0]}!")
         return False
 
-    # Ensure the move is valid on the source board
     if is_valid_move(piece, start, end, source_board):
-        # Ensure the move is to the other board
+        
         if source_board is target_board:
-            print("Pieces must teleport to the other board.")
+            print("La pieza no se teletransporta")
             return False
 
-        # Check if the destination square on the target board is empty
         if target_board[er][ec]:
-            print(f"Destination square {end} on the target board is not empty!")
+            print(f"El cuadro {end} no esta vacio!")
             return False
-
-        # Handle capturing: Remove enemy piece from the source board if any
-        if source_board[er][ec]:  # Capturing an opponent's piece on the source board
-            captured_piece = source_board[er][ec]
-            print(f"{piece} captures {captured_piece} at {end} on the source board.")
-            source_board[er][ec] = None  # Remove captured piece from source board
-
-        # Temporarily remove the piece from the source board
+        
         source_board[sr][sc] = None
 
-        # Simulate the move and check both boards for checks
         temp_source_board = [row[:] for row in source_board]
         temp_target_board = [row[:] for row in target_board]
         temp_target_board[er][ec] = piece
 
-        # Ensure the king is not in check on either board
         if is_in_check(temp_source_board, temp_target_board, current_turn):
-            print("Move leaves the king in check!")
-            # Restore the piece if the move is invalid
+            print("El rey esta en check!")
             source_board[sr][sc] = piece
             return False
 
-        # Perform the move: update source and target boards
-        target_board[er][ec] = piece  # Place the piece on the target board
+        source_board[er][ec] = None 
+        target_board[er][ec] = piece
 
-        # Switch the turn
         current_turn = 'b' if current_turn == 'w' else 'w'
         return True
     else:
-        print(f"Invalid move for {piece} from {start} to {end}.")
+        print(f"Movimiento invalido.")
     return False
 
 
 
 def ai_move(board_main, board_teleport):
-    """AI alternates between Greedy Search and Minimax for its move."""
     global current_turn, use_greedy_search
 
-    print("AI is thinking...")
-    depth = 2  # Adjust depth for minimax difficulty
-
+    print("Pensando")
+    depth = 2 
     if use_greedy_search:
-        print("Using Greedy Search...")
+        print("Usando avara.")
         greedy_result = busqueda_greedy(board_main, board_teleport, 50, 'b')
         if greedy_result:
-            best_move, _ = greedy_result  # Extract the best move and heuristic value
+            best_move, _ = greedy_result 
             if best_move:
-                start, end = best_move[2], best_move[3]  # Start and end positions
+                start, end = best_move[2], best_move[3] 
                 source_board, target_board = best_move[0], best_move[1]
                 if is_valid_move(source_board[start[0]][start[1]], start, end, source_board):
                     move_piece(start, end, source_board, target_board, check_turn=False)
         else:
-            print("Greedy Search failed to find a move.")
+            print("No encontro movimiento.")
 
     else:
-        print("Using Minimax...")
+        print("Usando Minimax...")
         best_move = None
         best_eval = -math.inf
 
-        # Generate all valid moves for black pieces on both boards (main and teleport)
         moves = []
         for r, row in enumerate(board_main):
             for c, piece in enumerate(row):
-                if piece and piece[0] == 'b':  # AI is black
+                if piece and piece[0] == 'b':  
                     possible_moves = generate_piece_moves((r, c), piece, board_main, board_teleport)
                     for move in possible_moves:
                         source_board, target_board, start, end = move
-                        if is_valid_move(piece, start, end, source_board):  # Filter invalid moves
-                            # Check if the target board's square is empty
-                            if target_board[end[0]][end[1]] is None:  # Ensure target square is empty
+                        if is_valid_move(piece, start, end, source_board): 
+                            if target_board[end[0]][end[1]] is None:
                                 moves.append(move)
 
-        # Add logic for teleport board pieces
         for r, row in enumerate(board_teleport):
             for c, piece in enumerate(row):
-                if piece and piece[0] == 'b':  # AI is black
+                if piece and piece[0] == 'b': 
                     possible_moves = generate_piece_moves((r, c), piece, board_teleport, board_main)
                     for move in possible_moves:
                         source_board, target_board, start, end = move
-                        if is_valid_move(piece, start, end, source_board):  # Filter invalid moves
-                            # Check if the target board's square is empty
-                            if target_board[end[0]][end[1]] is None:  # Ensure target square is empty
+                        if is_valid_move(piece, start, end, source_board): 
+                            if target_board[end[0]][end[1]] is None:
                                 moves.append(move)
 
-        # Evaluate all valid moves
         for move in moves:
             source_board, target_board, start, end = move
             if move_piece(start, end, source_board, target_board, check_turn=False):
@@ -134,15 +112,14 @@ def ai_move(board_main, board_teleport):
                 if eval > best_eval:
                     best_eval = eval
                     best_move = move
+            
 
-        # Execute the best move
         if best_move:
             source_board, target_board, start, end = best_move
             move_piece(start, end, source_board, target_board, check_turn=False)
 
-    # Alternate to the other algorithm for the next move
     use_greedy_search = not use_greedy_search
-    current_turn = 'w'  # Switch turn back to the player
+    current_turn = 'w' 
 
 
 

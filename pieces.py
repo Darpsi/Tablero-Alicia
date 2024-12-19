@@ -1,4 +1,3 @@
-# pieces.py
 import os
 import pygame
 from settings import ROWS, COLS, SQUARE_SIZE, WIDTH
@@ -8,13 +7,11 @@ def load_images():
               'bp', 'br', 'bn', 'bb', 'bq', 'bk']
     images = {}
     for piece in pieces:
-        # Correct path construction
         image_path = os.path.join("png", f"{piece}.png")  
         
-        if not os.path.exists(image_path):  # Check if the file exists
+        if not os.path.exists(image_path):
             raise FileNotFoundError(f"Image file not found: {image_path}")
         
-        # Load and scale the image
         images[piece] = pygame.image.load(image_path)
         images[piece] = pygame.transform.scale(images[piece], (SQUARE_SIZE, SQUARE_SIZE))
     return images
