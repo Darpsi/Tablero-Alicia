@@ -1,7 +1,6 @@
 import math
-from game_logic import is_checkmate
+from game_logic import is_checkmate, is_valid_move, is_in_check
 from heuristic import evaluate_board
-
 
 def minimax(board_main, board_teleport, depth, is_maximizing, alpha, beta, current_turn):
     """
@@ -16,6 +15,8 @@ def minimax(board_main, board_teleport, depth, is_maximizing, alpha, beta, curre
     if is_maximizing:
         max_eval = -math.inf
         for move in moves:
+            if not validate_move(board_main, board_teleport, move, current_turn):
+                continue  # Skip invalid moves
             make_move(board_main, board_teleport, move)
             eval = minimax(board_main, board_teleport, depth - 1, False, alpha, beta, switch_turn(current_turn))
             undo_move(board_main, board_teleport, move)
@@ -27,6 +28,8 @@ def minimax(board_main, board_teleport, depth, is_maximizing, alpha, beta, curre
     else:
         min_eval = math.inf
         for move in moves:
+            if not validate_move(board_main, board_teleport, move, current_turn):
+                continue  # Skip invalid moves
             make_move(board_main, board_teleport, move)
             eval = minimax(board_main, board_teleport, depth - 1, True, alpha, beta, switch_turn(current_turn))
             undo_move(board_main, board_teleport, move)
@@ -39,41 +42,63 @@ def minimax(board_main, board_teleport, depth, is_maximizing, alpha, beta, curre
 
 def generate_all_moves(board_main, board_teleport, current_turn):
     """
-    Generate all possible moves for the current player, including teleportation logic.
+    Generate all possible teleportation moves for the current player.
     """
     moves = []
-    for board in [board_main, board_teleport]:
-        for r, row in enumerate(board):
-            for c, piece in enumerate(row):
-                if piece and piece[0] == current_turn:
-                    moves.extend(generate_piece_moves((r, c), piece, board_main, board_teleport))
+
+    # Generate teleportation moves for pieces on the main board
+    for r, row in enumerate(board_main):
+        for c, piece in enumerate(row):
+            if piece and piece[0] == current_turn:
+                moves.extend(generate_piece_moves((r, c), piece, board_main, board_teleport))
+
+    # Generate teleportation moves for pieces on the teleport board
+    for r, row in enumerate(board_teleport):
+        for c, piece in enumerate(row):
+            if piece and piece[0] == current_turn:
+                moves.extend(generate_piece_moves((r, c), piece, board_teleport, board_main))
+
     return moves
 
 
-def generate_piece_moves(position, piece, board_main, board_teleport):
+def generate_piece_moves(position, piece, source_board, target_board):
     """
-    Generate all valid moves for a given piece, including teleportation.
+    Generate all valid teleportation moves for a given piece.
     """
     moves = []
     r, c = position
-    color = piece[0]
-    piece_type = piece[1]
 
     def add_move(target_board, sr, sc, er, ec):
-        """Add a move if valid."""
-        if 0 <= er < len(board_main) and 0 <= ec < len(board_main[0]):
-            target_piece = target_board[er][ec]
-            if not target_piece or target_piece[0] != color:
-                moves.append((board_main, target_board, (sr, sc), (er, ec)))
+        """Add a teleportation move if valid."""
+        if 0 <= er < len(target_board) and 0 <= ec < len(target_board[0]):
+            if target_board[er][ec] is None:  # Teleport only to empty squares
+                moves.append((source_board, target_board, (sr, sc), (er, ec)))
 
-    
-    # Add teleportation moves for all pieces
-    for er in range(len(board_teleport)):
-        for ec in range(len(board_teleport[0])):
-            if board_teleport[er][ec] is None:  # Teleport to empty squares
-                add_move(board_teleport, r, c, er, ec)
+    # Generate teleportation moves to every empty square on the other board
+    for er in range(len(target_board)):
+        for ec in range(len(target_board[0])):
+            add_move(target_board, r, c, er, ec)
 
     return moves
+
+
+def validate_move(board_main, board_teleport, move, current_turn):
+    """
+    Validate a move considering game rules and the king's safety.
+    """
+    source_board, target_board, start, end = move
+    piece = source_board[start[0]][start[1]]
+
+    # Check if the move is valid for the piece
+    if not is_valid_move(piece, start, end, source_board):
+        return False
+
+    # Simulate the move and check if it leaves the king in check
+    make_move(board_main, board_teleport, move)
+    in_check = is_in_check(board_main, board_teleport, current_turn)
+    undo_move(board_main, board_teleport, move)
+
+    return not in_check
 
 
 def make_move(board_main, board_teleport, move):
@@ -103,5 +128,6 @@ def switch_turn(current_turn):
     Switch the current player's turn.
     """
     return 'b' if current_turn == 'w' else 'w'
+
 
 

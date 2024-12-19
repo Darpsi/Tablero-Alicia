@@ -56,9 +56,8 @@ def is_valid_move(piece, start, end, board):
 
         # Diagonal capture
         if abs(delta_col) == 1 and delta_row == direction:
-            return True
-
-        # En passant capture logic can be added here if needed
+            if target_piece and target_piece[0] != piece[0]:  # Ensure there's an opponent's piece
+                return True
 
     return False  # If none of the conditions match, move is invalid
 
@@ -202,62 +201,6 @@ def can_escape_check(board1, board2, color):
                                 return True  # A teleportation blocking move exists
 
     return False  # No valid moves to block check found
-
-
-def is_checkmate(board1, board2, color):
-    if not is_in_check(board1, board2, color):
-        return False  # King is not in check, so not checkmate
-
-    king_pos_main = find_king(board1, color)
-    king_pos_teleport = find_king(board2, color)
-
-    if king_pos_main:
-        king_pos = king_pos_main
-        active_board = board1
-        teleport_board = board2
-    elif king_pos_teleport:
-        king_pos = king_pos_teleport
-        active_board = board2
-        teleport_board = board1
-    else:
-        return False  # No king found
-
-    kr, kc = king_pos
-
-    # Check if the king can move to a safe square
-    for dr in range(-1, 2):
-        for dc in range(-1, 2):
-            nr, nc = kr + dr, kc + dc
-            if 0 <= nr < ROWS and 0 <= nc < COLS:
-                if active_board[nr][nc] is None or active_board[nr][nc][0] != color:
-                    temp_board = [row[:] for row in active_board]
-                    temp_board[kr][kc] = None
-                    temp_board[nr][nc] = f"{color}k"
-                    if not is_in_check(temp_board, teleport_board, color):
-                        return False  # King can escape
-
-    # Check if any piece on the same board can capture the attacker
-    for row in range(ROWS):
-        for col in range(COLS):
-            piece = active_board[row][col]
-            if piece and piece[0] == color:  # Same color as the king
-                for er in range(ROWS):
-                    for ec in range(COLS):
-                        if is_valid_move(piece, (row, col), (er, ec), active_board):
-                            temp_board = [r[:] for r in active_board]
-                            temp_board[row][col] = None
-                            temp_board[er][ec] = piece
-                            if not is_in_check(temp_board, teleport_board, color):
-                                return False  # A piece can capture or block
-
-    # Check if a piece from the opposite board can teleport to block
-    if can_escape_check(board1, board2, color):
-        return False  # Teleporting piece can block the attack
-
-    return True  # No escape, checkmate
-
-
-
 
 def is_checkmate(board1, board2, color):
     if not is_in_check(board1, board2, color):
